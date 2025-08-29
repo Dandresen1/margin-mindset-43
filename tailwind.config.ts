@@ -61,7 +61,10 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Custom SaaS colors
+				'neon-green': 'hsl(var(--neon-green))',
+				'neon-red': 'hsl(var(--neon-red))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +87,27 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				// Custom animations for SaaS
+				'float': {
+					'0%, 100%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-20px)' }
+				},
+				'glow': {
+					'from': { boxShadow: '0 0 20px hsl(var(--primary) / 0.5)' },
+					'to': { boxShadow: '0 0 30px hsl(var(--primary) / 0.8), 0 0 40px hsl(var(--primary) / 0.3)' }
+				},
+				'slideUp': {
+					'from': { transform: 'translateY(30px)', opacity: '0' },
+					'to': { transform: 'translateY(0)', opacity: '1' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'float': 'float 6s ease-in-out infinite',
+				'glow': 'glow 2s ease-in-out infinite alternate',
+				'slide-up': 'slideUp 0.6s ease-out'
 			}
 		}
 	},
