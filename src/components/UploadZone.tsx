@@ -2,19 +2,83 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Image, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export const UploadZone = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [imagePath, setImagePath] = useState<string>('');
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const uploadToSupabase = async (file: File) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upload files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Generate file path: product_uploads/{user_id}/{timestamp}_{filename}
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      // Upload file with progress tracking
+      const { data, error } = await supabase.storage
+        .from('product_uploads')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      setImagePath(data.path);
+      setUploadProgress(100);
+      
+      toast({
+        title: "Upload successful",
+        description: "Your product image has been uploaded.",
+      });
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload file.",
+        variant: "destructive",
+      });
+      setUploadedFile(null);
+      setPreviewUrl('');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
       setUploadedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      
+      // Upload to Supabase Storage
+      await uploadToSupabase(file);
     }
-  }, []);
+  }, [user, toast]);
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
@@ -26,9 +90,10 @@ export const UploadZone = () => {
   });
 
   const handleAnalyze = () => {
-    if (uploadedFile) {
-      console.log('Analyzing file:', uploadedFile.name);
-      // TODO: Implement analysis logic
+    if (uploadedFile && imagePath) {
+      console.log('Analyzing file:', uploadedFile.name, 'Path:', imagePath);
+      // TODO: Implement analysis logic with imagePath
+      // Pass imagePath to the analysis service
     }
   };
 
@@ -61,11 +126,23 @@ export const UploadZone = () => {
                 {uploadedFile && (uploadedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
             </div>
+            
+            {uploading && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <Progress value={uploadProgress} className="w-full" />
+              </div>
+            )}
+            
             <Button 
               onClick={handleAnalyze}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground animate-glow"
+              disabled={uploading || !imagePath}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground animate-glow disabled:opacity-50"
             >
-              Analyze This Product
+              {uploading ? 'Uploading...' : 'Analyze This Product'}
             </Button>
           </div>
         ) : (
@@ -79,9 +156,14 @@ export const UploadZone = () => {
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 PNG, JPG, WEBP up to 10MB
+                {!user && <span className="block text-primary">Sign in required for upload</span>}
               </p>
             </div>
-            <Button variant="outline" className="glass border-primary/30 hover:border-primary">
+            <Button 
+              variant="outline" 
+              className="glass border-primary/30 hover:border-primary"
+              disabled={!user}
+            >
               <Image className="w-4 h-4 mr-2" />
               Choose File
             </Button>
