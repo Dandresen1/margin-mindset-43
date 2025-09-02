@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UploadZone } from './UploadZone';
+import { Header } from './Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calculator, TrendingUp, DollarSign } from 'lucide-react';
@@ -9,6 +10,7 @@ export const HeroSection = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 pt-20 pb-10">
+      <Header />
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 left-10 animate-float">
