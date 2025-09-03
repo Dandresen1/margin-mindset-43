@@ -3,9 +3,13 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, Image, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export const UploadZone = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -13,8 +17,22 @@ export const UploadZone = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imagePath, setImagePath] = useState<string>('');
+  const [analyzing, setAnalyzing] = useState(false);
+  
+  // Form fields
+  const [formData, setFormData] = useState({
+    product_name: '',
+    price: '',
+    cogs: '',
+    platform: 'amazon' as 'amazon' | 'tiktok' | 'shopify' | 'etsy',
+    weight_oz: '',
+    conversion_rate: '2',
+    cpc: '1.50'
+  });
+  
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const uploadToSupabase = async (file: File) => {
     if (!user) {
@@ -89,11 +107,75 @@ export const UploadZone = () => {
     multiple: false
   });
 
-  const handleAnalyze = () => {
-    if (uploadedFile && imagePath) {
-      console.log('Analyzing file:', uploadedFile.name, 'Path:', imagePath);
-      // TODO: Implement analysis logic with imagePath
-      // Pass imagePath to the analysis service
+  const handleAnalyze = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to analyze products.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.product_name || !formData.price || !formData.cogs) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in product name, price, and cost of goods.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAnalyzing(true);
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        throw new Error('No active session');
+      }
+
+      const requestData = {
+        product_name: formData.product_name,
+        price: parseFloat(formData.price),
+        cogs: parseFloat(formData.cogs),
+        platform: formData.platform,
+        weight_oz: parseFloat(formData.weight_oz) || 8,
+        conversion_rate: parseFloat(formData.conversion_rate) / 100,
+        cpc: parseFloat(formData.cpc),
+        image_path: imagePath
+      };
+
+      const response = await supabase.functions.invoke('analyze-product', {
+        body: requestData,
+        headers: {
+          Authorization: `Bearer ${session.session.access_token}`
+        }
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const { id } = response.data;
+      
+      toast({
+        title: "Analysis complete!",
+        description: "Your product analysis is ready.",
+      });
+
+      // Navigate to analysis page
+      navigate(`/analysis/${id}`);
+
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis failed",
+        description: error instanceof Error ? error.message : "Failed to analyze product.",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -112,7 +194,7 @@ export const UploadZone = () => {
         <input {...getInputProps()} />
         
         {previewUrl ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="relative w-32 h-32 mx-auto rounded-xl overflow-hidden">
               <img 
                 src={previewUrl} 
@@ -137,12 +219,107 @@ export const UploadZone = () => {
               </div>
             )}
             
+            {/* Analysis Form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+              <div>
+                <Label htmlFor="product_name">Product Name</Label>
+                <Input
+                  id="product_name"
+                  value={formData.product_name}
+                  onChange={(e) => setFormData({...formData, product_name: e.target.value})}
+                  placeholder="e.g. Wireless Earbuds"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="platform">Platform</Label>
+                <Select value={formData.platform} onValueChange={(value: any) => setFormData({...formData, platform: value})}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="amazon">Amazon (15% fees)</SelectItem>
+                    <SelectItem value="tiktok">TikTok Shop (8% fees)</SelectItem>
+                    <SelectItem value="etsy">Etsy (6.5% fees)</SelectItem>
+                    <SelectItem value="shopify">Shopify (0% fees)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="price">Selling Price ($)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  placeholder="29.99"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="cogs">Cost of Goods ($)</Label>
+                <Input
+                  id="cogs"
+                  type="number"
+                  step="0.01"
+                  value={formData.cogs}
+                  onChange={(e) => setFormData({...formData, cogs: e.target.value})}
+                  placeholder="8.00"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="weight_oz">Weight (oz)</Label>
+                <Input
+                  id="weight_oz"
+                  type="number"
+                  step="0.1"
+                  value={formData.weight_oz}
+                  onChange={(e) => setFormData({...formData, weight_oz: e.target.value})}
+                  placeholder="8"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="conversion_rate">Conversion Rate (%)</Label>
+                <Input
+                  id="conversion_rate"
+                  type="number"
+                  step="0.1"
+                  value={formData.conversion_rate}
+                  onChange={(e) => setFormData({...formData, conversion_rate: e.target.value})}
+                  placeholder="2"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <Label htmlFor="cpc">Cost Per Click ($)</Label>
+                <Input
+                  id="cpc"
+                  type="number"
+                  step="0.01"
+                  value={formData.cpc}
+                  onChange={(e) => setFormData({...formData, cpc: e.target.value})}
+                  placeholder="1.50"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            
             <Button 
               onClick={handleAnalyze}
-              disabled={uploading || !imagePath}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground animate-glow disabled:opacity-50"
+              disabled={uploading || !imagePath || analyzing}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground animate-glow disabled:opacity-50"
+              size="lg"
             >
-              {uploading ? 'Uploading...' : 'Analyze This Product'}
+              {uploading ? 'Uploading...' : analyzing ? 'Analyzing...' : 'Analyze This Product'}
             </Button>
           </div>
         ) : (
