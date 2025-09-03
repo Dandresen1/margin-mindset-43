@@ -89,7 +89,7 @@ export const Header = () => {
           ) : (
             <Link to="/auth">
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                Sign In
+                Sign In (Optional)
               </Button>
             </Link>
           )}

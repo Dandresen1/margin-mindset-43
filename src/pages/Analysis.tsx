@@ -16,11 +16,14 @@ import { MetricsOverview } from '@/components/analysis/MetricsOverview';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Download, Share2 } from 'lucide-react';
 import { useAnalysis } from '@/hooks/useAnalysis';
+import { AnonymousAnalysisCTA } from '@/components/AnonymousAnalysisCTA';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Analysis() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: analysisData, loading, error } = useAnalysis(id);
+  const { user } = useAuth();
 
   if (loading) {
     return (
@@ -111,6 +114,13 @@ export default function Analysis() {
         </div>
 
         {/* Main Content */}
+        {/* Anonymous User CTA */}
+        {!user && id?.startsWith('anonymous-') && (
+          <div className="mb-6">
+            <AnonymousAnalysisCTA analysisId={id} />
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Main Analysis */}
           <div className="lg:col-span-2 space-y-6">

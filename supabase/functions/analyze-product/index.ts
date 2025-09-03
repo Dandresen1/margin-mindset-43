@@ -180,44 +180,41 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user from Authorization header
+    // Get user from Authorization header (optional for anonymous analysis)
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    let user = null;
 
-    // Verify JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid authentication' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (authHeader) {
+      // Verify JWT token if provided
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (!authError && authUser) {
+        user = authUser;
+      }
     }
 
     // Parse request body
     const body = await req.json();
     console.log('Received request body:', body);
 
-    // Get user's organization
-    const { data: membership, error: membershipError } = await supabase
-      .from('memberships')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single();
+    // Get user's organization if authenticated
+    let membership = null;
+    if (user) {
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('memberships')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .single();
 
-    if (membershipError || !membership) {
-      console.error('Membership error:', membershipError);
-      return new Response(
-        JSON.stringify({ error: 'User organization not found' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (membershipError) {
+        console.error('Membership error:', membershipError);
+        return new Response(
+          JSON.stringify({ error: 'User organization not found' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      membership = membershipData;
     }
 
     // Validate required fields and set defaults
@@ -243,44 +240,62 @@ serve(async (req) => {
     // Calculate results using the margin calculator
     const computedResults = compute(analysisInput);
     
-    // Insert into reports table
-    const { data: report, error: insertError } = await supabase
-      .from('reports')
-      .insert({
-        org_id: membership.org_id,
-        created_by: user.id,
-        name: analysisInput.product_name || 'Product Analysis',
-        status: 'completed',
-        input: analysisInput,
-        output: computedResults,
-        source_url: body.source_url,
-        data_source: body.data_source || (body.image_path ? 'image' : 'manual'),
-        started_at: new Date().toISOString(),
-        finished_at: new Date().toISOString()
-      })
-      .select('id')
-      .single();
+    // For authenticated users, save to database
+    if (user && membership) {
+      const { data: report, error: insertError } = await supabase
+        .from('reports')
+        .insert({
+          org_id: membership.org_id,
+          created_by: user.id,
+          name: analysisInput.product_name || 'Product Analysis',
+          status: 'completed',
+          input: analysisInput,
+          output: computedResults,
+          source_url: body.source_url,
+          data_source: body.data_source || (body.image_path ? 'image' : 'manual'),
+          started_at: new Date().toISOString(),
+          finished_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
 
-    if (insertError) {
-      console.error('Insert error:', insertError);
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to save analysis' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Analysis completed successfully for authenticated user:', report.id);
+
       return new Response(
-        JSON.stringify({ error: 'Failed to save analysis' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          id: report.id,
+          result: computedResults,
+          saved: true
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    } else {
+      // For anonymous users, return results without saving
+      console.log('Analysis completed for anonymous user');
+      
+      return new Response(
+        JSON.stringify({
+          id: `anonymous-${Date.now()}`,
+          result: computedResults,
+          saved: false
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       );
     }
-
-    console.log('Analysis completed successfully:', report.id);
-
-    return new Response(
-      JSON.stringify({
-        id: report.id,
-        result: computedResults
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
 
   } catch (error) {
     console.error('Function error:', error);

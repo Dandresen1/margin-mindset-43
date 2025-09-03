@@ -33,11 +33,7 @@ const App = () => (
             />
             <Route 
               path="/analysis/:id" 
-              element={
-                <ProtectedRoute>
-                  <Analysis />
-                </ProtectedRoute>
-              } 
+              element={<Analysis />} 
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

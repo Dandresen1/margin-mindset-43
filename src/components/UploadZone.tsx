@@ -53,10 +53,12 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
 
   const uploadToSupabase = async (file: File) => {
     if (!user) {
+      // For anonymous users, create local preview without uploading
+      const localUrl = URL.createObjectURL(file);
+      setImagePath(`local:${file.name}`);
       toast({
-        title: "Authentication required",
-        description: "Please sign in to upload files.",
-        variant: "destructive",
+        title: "Image ready for analysis",
+        description: "Sign in to save uploaded images permanently.",
       });
       return;
     }
@@ -125,14 +127,6 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
   });
 
   const handleAnalyze = async () => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to analyze products.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (!formData.product_name || !formData.price || !formData.cogs) {
       toast({
@@ -146,12 +140,6 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
     setAnalyzing(true);
 
     try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        throw new Error('No active session');
-      }
-
       const requestData = {
         product_name: formData.product_name,
         price: parseFloat(formData.price),
@@ -165,26 +153,39 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
         data_source: prefilledData?.data_source || (imagePath ? 'image' : 'manual')
       };
 
+      // Get session for authenticated users
+      const { data: session } = await supabase.auth.getSession();
+      const headers = session.session ? {
+        Authorization: `Bearer ${session.session.access_token}`
+      } : {};
+
       const response = await supabase.functions.invoke('analyze-product', {
         body: requestData,
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`
-        }
+        headers
       });
 
       if (response.error) {
         throw response.error;
       }
 
-      const { id } = response.data;
+      const { id, result, saved } = response.data;
       
-      toast({
-        title: "Analysis complete!",
-        description: "Your product analysis is ready.",
-      });
-
-      // Navigate to analysis page
-      navigate(`/analysis/${id}`);
+      if (saved) {
+        toast({
+          title: "Analysis complete!",
+          description: "Your product analysis has been saved.",
+        });
+        // Navigate to analysis page for saved analysis
+        navigate(`/analysis/${id}`);
+      } else {
+        // For anonymous users, store result in sessionStorage and navigate
+        sessionStorage.setItem('anonymous-analysis', JSON.stringify(result));
+        toast({
+          title: "Analysis complete!",
+          description: "Sign in to save your analysis permanently.",
+        });
+        navigate(`/analysis/${id}`);
+      }
 
     } catch (error) {
       console.error('Analysis error:', error);
@@ -441,7 +442,7 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
               
               <Button 
                 onClick={handleAnalyze}
-                disabled={uploading || !imagePath || analyzing}
+                disabled={uploading || analyzing}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground animate-glow disabled:opacity-50"
                 size="lg"
               >
@@ -459,13 +460,12 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   PNG, JPG, WEBP up to 10MB
-                  {!user && <span className="block text-primary">Sign in required for upload</span>}
+                  {!user && <span className="block text-muted-foreground">Sign in to save images permanently</span>}
                 </p>
               </div>
               <Button 
                 variant="outline" 
                 className="glass border-primary/30 hover:border-primary"
-                disabled={!user}
               >
                 <Image className="w-4 h-4 mr-2" />
                 Choose File

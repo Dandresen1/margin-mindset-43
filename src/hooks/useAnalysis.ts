@@ -63,7 +63,7 @@ export function useAnalysis(analysisId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!analysisId || !session) {
+    if (!analysisId) {
       setLoading(false);
       return;
     }
@@ -72,6 +72,67 @@ export function useAnalysis(analysisId: string | undefined) {
       try {
         setLoading(true);
         setError(null);
+
+        // Check if this is an anonymous analysis
+        if (analysisId.startsWith('anonymous-')) {
+          const anonymousData = sessionStorage.getItem('anonymous-analysis');
+          if (anonymousData) {
+            const parsedData = JSON.parse(anonymousData);
+            
+            const transformedData: AnalysisData = {
+              id: analysisId,
+              product: {
+                name: parsedData.product?.name || 'Product Analysis',
+                image: parsedData.product?.image || '/placeholder.svg',
+                description: parsedData.product?.description || 'Unit economics analysis',
+                supplier_price: parsedData.product?.supplier_price || 0,
+                category: parsedData.product?.category || 'General'
+              },
+              margins: parsedData.margins || {
+                conservative: 0,
+                moderate: 0,
+                aggressive: 0
+              },
+              costs: parsedData.costs || {
+                product_cost: 0,
+                shipping: 0,
+                platform_fees: 0,
+                ad_spend: 0,
+                returns: 0,
+                processing: 0
+              },
+              competitors: parsedData.competitors || [],
+              market: parsedData.market || {
+                saturation: 50,
+                trend_score: 50,
+                seasonality: 'Stable'
+              },
+              bundles: parsedData.bundles || [],
+              recommendation: parsedData.recommendation || {
+                verdict: 'CAUTION',
+                reasoning: 'Analysis completed',
+                confidence: 50
+              },
+              levers: parsedData.levers || [],
+              breakeven_price: parsedData.breakeven_price,
+              roas: parsedData.roas,
+              target_cpc: parsedData.target_cpc
+            };
+            
+            setData(transformedData);
+          } else {
+            setError('Anonymous analysis data not found. The analysis may have expired.');
+          }
+          setLoading(false);
+          return;
+        }
+
+        // For authenticated analyses, check if user is logged in
+        if (!session) {
+          setError('You must be signed in to view saved analyses.');
+          setLoading(false);
+          return;
+        }
 
         // Fetch the report from database
         const { data: report, error: fetchError } = await supabase

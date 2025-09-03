@@ -35,7 +35,7 @@ export const HeroSection = () => {
             <span className="text-primary animate-glow">Reality Checker</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Upload any product or paste a URL. See if you'll <span className="text-primary font-semibold">actually make money</span> or just burn cash.
+            Upload any product or paste a URL. See if you'll <span className="text-primary font-semibold">actually make money</span> or just burn cash. <span className="text-sm text-primary">No signup required.</span>
           </p>
         </div>
 
@@ -55,13 +55,13 @@ export const HeroSection = () => {
         </div>
 
         {/* CTA button - Free analyses */}
-        <div className="animate-slide-up" style={{ animationDelay: '0.9s' }}>
+        <div className="animate-slide-up text-center" style={{ animationDelay: '0.9s' }}>
           <p className="text-sm text-muted-foreground mb-3">
-            Start analyzing products for free
+            Instant analysis • No signup required
           </p>
-          <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 animate-glow">
-            Try 3 Free Analyses
-          </Button>
+          <p className="text-xs text-primary/80 mb-4">
+            Sign in to save your analyses and access advanced features
+          </p>
         </div>
       </div>
     </section>
