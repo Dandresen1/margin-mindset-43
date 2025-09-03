@@ -1,3 +1,5 @@
+import { ProductCategory, detectCategoryFromText, CATEGORY_DEFAULTS, getEstimatedCOGS, getEstimatedWeight } from '../lib/productDefaults';
+
 export type SupportedPlatform = 'amazon' | 'tiktok' | 'shopify' | 'etsy';
 
 export interface URLAnalysisResult {
@@ -5,6 +7,10 @@ export interface URLAnalysisResult {
   platform?: SupportedPlatform;
   productName?: string;
   productId?: string;
+  category?: ProductCategory;
+  estimatedPrice?: number;
+  estimatedCOGS?: number;
+  estimatedWeight?: number;
   error?: string;
 }
 
@@ -61,19 +67,29 @@ export class URLAnalyzer {
             }
           }
           
-          // Extract product name from URL path (basic attempt)
+          // Extract product name and additional data
           const productName = this.extractProductName(urlObj, platform as SupportedPlatform);
+          const category = productName ? detectCategoryFromText(productName) : 'unknown';
+          const estimatedPrice = this.extractPriceFromURL(urlObj, platform as SupportedPlatform);
+          
+          // Generate smart defaults based on category
+          const estimatedWeight = getEstimatedWeight(category);
+          const estimatedCOGS = estimatedPrice ? getEstimatedCOGS(estimatedPrice, category) : undefined;
           
           return {
             isValid: true,
             platform: platform as SupportedPlatform,
             productId,
-            productName
+            productName,
+            category,
+            estimatedPrice,
+            estimatedCOGS,
+            estimatedWeight
           };
         }
       }
       
-        return {
+      return {
         isValid: false,
         error: 'Unsupported platform. We support Amazon, TikTok Shop, Etsy, and Shopify.'
       };
@@ -129,7 +145,46 @@ export class URLAnalyzer {
     return rawName
       .replace(/[-_]/g, ' ')
       .replace(/\b\w/g, l => l.toUpperCase())
-      .substring(0, 50); // Limit length
+      .replace(/\b(dp|product|listing|products)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 50);
+  }
+
+  private static extractPriceFromURL(urlObj: URL, platform: SupportedPlatform): number | undefined {
+    const searchParams = urlObj.searchParams;
+    const pathname = urlObj.pathname;
+    
+    // Try to extract price from URL parameters
+    const priceParams = ['price', 'p', 'cost', 'amount'];
+    for (const param of priceParams) {
+      const value = searchParams.get(param);
+      if (value) {
+        const price = parseFloat(value.replace(/[^0-9.]/g, ''));
+        if (price > 0) return price;
+      }
+    }
+    
+    // Try to extract from pathname for some platforms
+    switch (platform) {
+      case 'amazon':
+        // Amazon sometimes has price in URL structure
+        const amazonPriceMatch = pathname.match(/\$(\d+(?:\.\d{2})?)/);
+        if (amazonPriceMatch) {
+          return parseFloat(amazonPriceMatch[1]);
+        }
+        break;
+        
+      case 'etsy':
+        // Etsy sometimes includes price hints
+        const etsyPriceMatch = pathname.match(/(\d+)-(?:dollar|usd|price)/i);
+        if (etsyPriceMatch) {
+          return parseFloat(etsyPriceMatch[1]);
+        }
+        break;
+    }
+    
+    return undefined;
   }
 
   static getPlatformDisplayName(platform: SupportedPlatform): string {

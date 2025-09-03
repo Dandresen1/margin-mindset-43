@@ -1,15 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Upload, Image, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect } from "react";
+import { useDropzone } from "react-dropzone";
+import { Upload, Image as ImageIcon, AlertCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { ProductFormHelper } from "@/components/ProductFormHelper";
+import { detectCategoryFromText } from "@/lib/productDefaults";
 
 interface PrefilledData {
   product_name?: string;
@@ -244,7 +247,7 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
               />
             </div>
             
-            <div>
+            <div className="space-y-1">
               <Label htmlFor="cogs">Cost of Goods ($)</Label>
               <Input
                 id="cogs"
@@ -254,6 +257,13 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                 onChange={(e) => setFormData({...formData, cogs: e.target.value})}
                 placeholder="8.00"
                 className="mt-1"
+              />
+              <ProductFormHelper
+                productName={formData.product_name}
+                sellingPrice={parseFloat(formData.price) || undefined}
+                category={detectCategoryFromText(formData.product_name)}
+                cogs={parseFloat(formData.cogs) || undefined}
+                onCOGSChange={(value) => setFormData({...formData, cogs: value})}
               />
             </div>
             
@@ -387,7 +397,7 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                   />
                 </div>
                 
-                <div>
+                <div className="space-y-1">
                   <Label htmlFor="cogs">Cost of Goods ($)</Label>
                   <Input
                     id="cogs"
@@ -397,6 +407,13 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                     onChange={(e) => setFormData({...formData, cogs: e.target.value})}
                     placeholder="8.00"
                     className="mt-1"
+                  />
+                  <ProductFormHelper
+                    productName={formData.product_name}
+                    sellingPrice={parseFloat(formData.price) || undefined}
+                    category={detectCategoryFromText(formData.product_name)}
+                    cogs={parseFloat(formData.cogs) || undefined}
+                    onCOGSChange={(value) => setFormData({...formData, cogs: value})}
                   />
                 </div>
                 
@@ -467,7 +484,7 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                 variant="outline" 
                 className="glass border-primary/30 hover:border-primary"
               >
-                <Image className="w-4 h-4 mr-2" />
+                <ImageIcon className="w-4 h-4 mr-2" />
                 Choose File
               </Button>
             </div>

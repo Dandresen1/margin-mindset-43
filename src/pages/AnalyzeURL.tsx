@@ -118,8 +118,11 @@ export default function AnalyzeURL() {
         {/* Analysis Form */}
         <UploadZone 
           prefilledData={{
-            platform: urlAnalysis.platform!,
             product_name: urlAnalysis.productName || '',
+            platform: urlAnalysis.platform!,
+            price: urlAnalysis.estimatedPrice?.toString() || '',
+            cogs: urlAnalysis.estimatedCOGS?.toString() || '',
+            weight_oz: urlAnalysis.estimatedWeight?.toString() || '',
             source_url: sourceUrl!,
             data_source: 'url',
             ...platformDefaults
