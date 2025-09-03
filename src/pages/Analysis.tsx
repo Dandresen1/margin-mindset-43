@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,128 +12,15 @@ import { CompetitorAnalysis } from '@/components/analysis/CompetitorAnalysis';
 import { BundleOpportunities } from '@/components/analysis/BundleOpportunities';
 import { GTMRecommendations } from '@/components/analysis/GTMRecommendations';
 import { VerdictSection } from '@/components/analysis/VerdictSection';
+import { MetricsOverview } from '@/components/analysis/MetricsOverview';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Download, Share2 } from 'lucide-react';
-
-interface AnalysisData {
-  id: string;
-  product: {
-    name: string;
-    image: string;
-    description: string;
-    supplier_price: number;
-    category: string;
-  };
-  margins: {
-    conservative: number;
-    moderate: number;
-    aggressive: number;
-  };
-  costs: {
-    product_cost: number;
-    shipping: number;
-    platform_fees: number;
-    ad_spend: number;
-    returns: number;
-    processing: number;
-  };
-  competitors: Array<{
-    platform: string;
-    price: number;
-    rating: number;
-    reviews: number;
-  }>;
-  market: {
-    saturation: number;
-    trend_score: number;
-    seasonality: string;
-  };
-  bundles: Array<{
-    products: string[];
-    margin_increase: number;
-    confidence: number;
-  }>;
-  recommendation: {
-    verdict: 'GO' | 'CAUTION' | 'NO-GO';
-    reasoning: string;
-    confidence: number;
-  };
-}
+import { useAnalysis } from '@/hooks/useAnalysis';
 
 export default function Analysis() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Simulate loading with progress
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) {
-          clearInterval(progressInterval);
-          return 95;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 200);
-
-    // Simulate API call
-    setTimeout(() => {
-      setProgress(100);
-      setLoading(false);
-      // Mock data for now - will be replaced with actual API call
-      setAnalysisData({
-        id: id || '1',
-        product: {
-          name: 'Wireless Bluetooth Earbuds',
-          image: '/placeholder.svg',
-          description: 'Premium wireless earbuds with noise cancellation',
-          supplier_price: 12.50,
-          category: 'Electronics'
-        },
-        margins: {
-          conservative: 15.2,
-          moderate: 28.7,
-          aggressive: 45.1
-        },
-        costs: {
-          product_cost: 12.50,
-          shipping: 3.20,
-          platform_fees: 2.85,
-          ad_spend: 8.40,
-          returns: 4.20,
-          processing: 1.15
-        },
-        competitors: [
-          { platform: 'Amazon', price: 39.99, rating: 4.2, reviews: 1247 },
-          { platform: 'TikTok Shop', price: 29.99, rating: 4.5, reviews: 892 },
-          { platform: 'AliExpress', price: 15.99, rating: 4.0, reviews: 3421 }
-        ],
-        market: {
-          saturation: 75,
-          trend_score: 8.2,
-          seasonality: 'Stable year-round'
-        },
-        bundles: [
-          {
-            products: ['Phone Case', 'Charging Cable'],
-            margin_increase: 22.5,
-            confidence: 87
-          }
-        ],
-        recommendation: {
-          verdict: 'CAUTION',
-          reasoning: 'High market saturation but strong margins possible with proper positioning',
-          confidence: 72
-        }
-      });
-    }, 3000);
-
-    return () => clearInterval(progressInterval);
-  }, [id]);
+  const { data: analysisData, loading, error } = useAnalysis(id);
 
   if (loading) {
     return (
@@ -144,19 +31,17 @@ export default function Analysis() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
-            <h1 className="text-2xl font-bold">Analyzing Product...</h1>
+            <h1 className="text-2xl font-bold">Loading Analysis...</h1>
           </div>
           
           <Card className="glass-card mb-8">
             <CardContent className="p-8 text-center">
               <div className="max-w-md mx-auto space-y-6">
                 <div className="animate-spin h-16 w-16 border-4 border-primary/20 border-t-primary rounded-full mx-auto"></div>
-                <h3 className="text-xl font-semibold">Crunching the Numbers</h3>
+                <h3 className="text-xl font-semibold">Loading Your Results</h3>
                 <p className="text-muted-foreground">
-                  Analyzing costs, competition, and market conditions...
+                  Retrieving your product analysis...
                 </p>
-                <Progress value={progress} className="w-full" />
-                <p className="text-sm text-muted-foreground">{Math.round(progress)}% complete</p>
               </div>
             </CardContent>
           </Card>
@@ -232,9 +117,10 @@ export default function Analysis() {
             <ProductOverview product={analysisData.product} />
             
             <Tabs defaultValue="calculator" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="calculator">Calculator</TabsTrigger>
                 <TabsTrigger value="costs">Costs</TabsTrigger>
+                <TabsTrigger value="metrics">Metrics</TabsTrigger>
                 <TabsTrigger value="competitors">Market</TabsTrigger>
                 <TabsTrigger value="bundles">Bundles</TabsTrigger>
               </TabsList>
@@ -249,6 +135,16 @@ export default function Analysis() {
               
               <TabsContent value="costs" className="mt-6">
                 <CostBreakdown costs={analysisData.costs} />
+              </TabsContent>
+
+              <TabsContent value="metrics" className="mt-6">
+                <MetricsOverview 
+                  breakeven_price={analysisData.breakeven_price}
+                  roas={analysisData.roas}
+                  target_cpc={analysisData.target_cpc}
+                  currentMargin={analysisData.margins.moderate}
+                  levers={analysisData.levers}
+                />
               </TabsContent>
               
               <TabsContent value="competitors" className="mt-6">
