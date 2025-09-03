@@ -69,7 +69,7 @@ export class URLAnalyzer {
           
           // Extract product name and additional data
           const productName = this.extractProductName(urlObj, platform as SupportedPlatform);
-          const category = productName ? detectCategoryFromText(productName) : 'unknown';
+          const category = productName ? detectCategoryFromText(productName).value : 'unknown';
           const estimatedPrice = this.extractPriceFromURL(urlObj, platform as SupportedPlatform);
           
           // Generate smart defaults based on category

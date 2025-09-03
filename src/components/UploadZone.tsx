@@ -261,7 +261,7 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
               <ProductFormHelper
                 productName={formData.product_name}
                 sellingPrice={parseFloat(formData.price) || undefined}
-                category={detectCategoryFromText(formData.product_name)}
+                category={detectCategoryFromText(formData.product_name).value}
                 cogs={parseFloat(formData.cogs) || undefined}
                 onCOGSChange={(value) => setFormData({...formData, cogs: value})}
               />
@@ -411,7 +411,7 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                   <ProductFormHelper
                     productName={formData.product_name}
                     sellingPrice={parseFloat(formData.price) || undefined}
-                    category={detectCategoryFromText(formData.product_name)}
+                    category={detectCategoryFromText(formData.product_name).value}
                     cogs={parseFloat(formData.cogs) || undefined}
                     onCOGSChange={(value) => setFormData({...formData, cogs: value})}
                   />
