@@ -144,6 +144,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          data_source: string | null
           error: string | null
           finished_at: string | null
           id: string
@@ -151,12 +152,14 @@ export type Database = {
           name: string
           org_id: string
           output: Json | null
+          source_url: string | null
           started_at: string | null
           status: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          data_source?: string | null
           error?: string | null
           finished_at?: string | null
           id?: string
@@ -164,12 +167,14 @@ export type Database = {
           name: string
           org_id: string
           output?: Json | null
+          source_url?: string | null
           started_at?: string | null
           status?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          data_source?: string | null
           error?: string | null
           finished_at?: string | null
           id?: string
@@ -177,6 +182,7 @@ export type Database = {
           name?: string
           org_id?: string
           output?: Json | null
+          source_url?: string | null
           started_at?: string | null
           status?: string
         }

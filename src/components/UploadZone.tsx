@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Image, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
-export const UploadZone = () => {
+interface PrefilledData {
+  product_name?: string;
+  price?: string;
+  cogs?: string;
+  platform?: 'amazon' | 'tiktok' | 'shopify' | 'etsy';
+  weight_oz?: string | number;
+  conversion_rate?: string | number;
+  cpc?: string | number;
+  source_url?: string;
+  data_source?: 'manual' | 'url' | 'image';
+}
+
+interface UploadZoneProps {
+  prefilledData?: PrefilledData;
+  mode?: 'default' | 'url-analysis';
+}
+
+export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
@@ -21,13 +38,13 @@ export const UploadZone = () => {
   
   // Form fields
   const [formData, setFormData] = useState({
-    product_name: '',
-    price: '',
-    cogs: '',
-    platform: 'amazon' as 'amazon' | 'tiktok' | 'shopify' | 'etsy',
-    weight_oz: '',
-    conversion_rate: '2',
-    cpc: '1.50'
+    product_name: prefilledData?.product_name || '',
+    price: (prefilledData?.price ? String(prefilledData.price) : '') || '',
+    cogs: (prefilledData?.cogs ? String(prefilledData.cogs) : '') || '',
+    platform: prefilledData?.platform || 'amazon' as 'amazon' | 'tiktok' | 'shopify' | 'etsy',
+    weight_oz: (prefilledData?.weight_oz ? String(prefilledData.weight_oz) : '') || '',
+    conversion_rate: (prefilledData?.conversion_rate ? String(prefilledData.conversion_rate) : '') || '2',
+    cpc: (prefilledData?.cpc ? String(prefilledData.cpc) : '') || '1.50'
   });
   
   const { user } = useAuth();
@@ -143,7 +160,9 @@ export const UploadZone = () => {
         weight_oz: parseFloat(formData.weight_oz) || 8,
         conversion_rate: parseFloat(formData.conversion_rate) / 100,
         cpc: parseFloat(formData.cpc),
-        image_path: imagePath
+        image_path: imagePath,
+        source_url: prefilledData?.source_url,
+        data_source: prefilledData?.data_source || (imagePath ? 'image' : 'manual')
       };
 
       const response = await supabase.functions.invoke('analyze-product', {
@@ -181,172 +200,280 @@ export const UploadZone = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <div
-        {...getRootProps()}
-        className={`
-          relative glass-card rounded-3xl p-8 border-2 border-dashed transition-all duration-300 cursor-pointer
-          ${isDragActive 
-            ? 'border-primary bg-primary/5 scale-105' 
-            : 'border-primary/30 hover:border-primary/50 hover:bg-primary/5'
-          }
-        `}
-      >
-        <input {...getInputProps()} />
-        
-        {previewUrl ? (
-          <div className="space-y-6">
-            <div className="relative w-32 h-32 mx-auto rounded-xl overflow-hidden">
-              <img 
-                src={previewUrl} 
-                alt="Preview" 
-                className="w-full h-full object-cover"
+      {mode === 'url-analysis' ? (
+        // URL Analysis Mode - Show form directly
+        <div className="glass-card rounded-3xl p-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="product_name">Product Name</Label>
+              <Input
+                id="product_name"
+                value={formData.product_name}
+                onChange={(e) => setFormData({...formData, product_name: e.target.value})}
+                placeholder="e.g. Wireless Earbuds"
+                className="mt-1"
               />
             </div>
+            
             <div>
-              <p className="text-sm font-medium">{uploadedFile?.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {uploadedFile && (uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
+              <Label htmlFor="platform">Platform</Label>
+              <Select value={formData.platform} onValueChange={(value: any) => setFormData({...formData, platform: value})}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="amazon">Amazon (15% fees)</SelectItem>
+                  <SelectItem value="tiktok">TikTok Shop (8% fees)</SelectItem>
+                  <SelectItem value="etsy">Etsy (6.5% fees)</SelectItem>
+                  <SelectItem value="shopify">Shopify (0% fees)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
-            {uploading && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Uploading...</span>
-                  <span>{uploadProgress}%</span>
+            <div>
+              <Label htmlFor="price">Selling Price ($)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => setFormData({...formData, price: e.target.value})}
+                placeholder="29.99"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="cogs">Cost of Goods ($)</Label>
+              <Input
+                id="cogs"
+                type="number"
+                step="0.01"
+                value={formData.cogs}
+                onChange={(e) => setFormData({...formData, cogs: e.target.value})}
+                placeholder="8.00"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="weight_oz">Weight (oz)</Label>
+              <Input
+                id="weight_oz"
+                type="number"
+                step="0.1"
+                value={formData.weight_oz}
+                onChange={(e) => setFormData({...formData, weight_oz: e.target.value})}
+                placeholder="8"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="conversion_rate">Conversion Rate (%)</Label>
+              <Input
+                id="conversion_rate"
+                type="number"
+                step="0.1"
+                value={formData.conversion_rate}
+                onChange={(e) => setFormData({...formData, conversion_rate: e.target.value})}
+                placeholder="2"
+                className="mt-1"
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="cpc">Cost Per Click ($)</Label>
+              <Input
+                id="cpc"
+                type="number"
+                step="0.01"
+                value={formData.cpc}
+                onChange={(e) => setFormData({...formData, cpc: e.target.value})}
+                placeholder="1.50"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          
+          <Button 
+            onClick={handleAnalyze}
+            disabled={analyzing}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground animate-glow disabled:opacity-50"
+            size="lg"
+          >
+            {analyzing ? 'Analyzing...' : 'Analyze Product from URL'}
+          </Button>
+        </div>
+      ) : (
+        // Default Mode - Image Upload + Form
+        <div
+          {...getRootProps()}
+          className={`
+            relative glass-card rounded-3xl p-8 border-2 border-dashed transition-all duration-300 cursor-pointer
+            ${isDragActive 
+              ? 'border-primary bg-primary/5 scale-105' 
+              : 'border-primary/30 hover:border-primary/50 hover:bg-primary/5'
+            }
+          `}
+        >
+          <input {...getInputProps()} />
+          
+          {previewUrl ? (
+            <div className="space-y-6">
+              <div className="relative w-32 h-32 mx-auto rounded-xl overflow-hidden">
+                <img 
+                  src={previewUrl} 
+                  alt="Preview" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{uploadedFile?.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {uploadedFile && (uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+              
+              {uploading && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Uploading...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="w-full" />
                 </div>
-                <Progress value={uploadProgress} className="w-full" />
-              </div>
-            )}
-            
-            {/* Analysis Form */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-              <div>
-                <Label htmlFor="product_name">Product Name</Label>
-                <Input
-                  id="product_name"
-                  value={formData.product_name}
-                  onChange={(e) => setFormData({...formData, product_name: e.target.value})}
-                  placeholder="e.g. Wireless Earbuds"
-                  className="mt-1"
-                />
+              )}
+              
+              {/* Analysis Form */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                <div>
+                  <Label htmlFor="product_name">Product Name</Label>
+                  <Input
+                    id="product_name"
+                    value={formData.product_name}
+                    onChange={(e) => setFormData({...formData, product_name: e.target.value})}
+                    placeholder="e.g. Wireless Earbuds"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="platform">Platform</Label>
+                  <Select value={formData.platform} onValueChange={(value: any) => setFormData({...formData, platform: value})}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="amazon">Amazon (15% fees)</SelectItem>
+                      <SelectItem value="tiktok">TikTok Shop (8% fees)</SelectItem>
+                      <SelectItem value="etsy">Etsy (6.5% fees)</SelectItem>
+                      <SelectItem value="shopify">Shopify (0% fees)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="price">Selling Price ($)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    placeholder="29.99"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="cogs">Cost of Goods ($)</Label>
+                  <Input
+                    id="cogs"
+                    type="number"
+                    step="0.01"
+                    value={formData.cogs}
+                    onChange={(e) => setFormData({...formData, cogs: e.target.value})}
+                    placeholder="8.00"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="weight_oz">Weight (oz)</Label>
+                  <Input
+                    id="weight_oz"
+                    type="number"
+                    step="0.1"
+                    value={formData.weight_oz}
+                    onChange={(e) => setFormData({...formData, weight_oz: e.target.value})}
+                    placeholder="8"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="conversion_rate">Conversion Rate (%)</Label>
+                  <Input
+                    id="conversion_rate"
+                    type="number"
+                    step="0.1"
+                    value={formData.conversion_rate}
+                    onChange={(e) => setFormData({...formData, conversion_rate: e.target.value})}
+                    placeholder="2"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label htmlFor="cpc">Cost Per Click ($)</Label>
+                  <Input
+                    id="cpc"
+                    type="number"
+                    step="0.01"
+                    value={formData.cpc}
+                    onChange={(e) => setFormData({...formData, cpc: e.target.value})}
+                    placeholder="1.50"
+                    className="mt-1"
+                  />
+                </div>
               </div>
               
-              <div>
-                <Label htmlFor="platform">Platform</Label>
-                <Select value={formData.platform} onValueChange={(value: any) => setFormData({...formData, platform: value})}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="amazon">Amazon (15% fees)</SelectItem>
-                    <SelectItem value="tiktok">TikTok Shop (8% fees)</SelectItem>
-                    <SelectItem value="etsy">Etsy (6.5% fees)</SelectItem>
-                    <SelectItem value="shopify">Shopify (0% fees)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="price">Selling Price ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  placeholder="29.99"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="cogs">Cost of Goods ($)</Label>
-                <Input
-                  id="cogs"
-                  type="number"
-                  step="0.01"
-                  value={formData.cogs}
-                  onChange={(e) => setFormData({...formData, cogs: e.target.value})}
-                  placeholder="8.00"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="weight_oz">Weight (oz)</Label>
-                <Input
-                  id="weight_oz"
-                  type="number"
-                  step="0.1"
-                  value={formData.weight_oz}
-                  onChange={(e) => setFormData({...formData, weight_oz: e.target.value})}
-                  placeholder="8"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="conversion_rate">Conversion Rate (%)</Label>
-                <Input
-                  id="conversion_rate"
-                  type="number"
-                  step="0.1"
-                  value={formData.conversion_rate}
-                  onChange={(e) => setFormData({...formData, conversion_rate: e.target.value})}
-                  placeholder="2"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <Label htmlFor="cpc">Cost Per Click ($)</Label>
-                <Input
-                  id="cpc"
-                  type="number"
-                  step="0.01"
-                  value={formData.cpc}
-                  onChange={(e) => setFormData({...formData, cpc: e.target.value})}
-                  placeholder="1.50"
-                  className="mt-1"
-                />
-              </div>
+              <Button 
+                onClick={handleAnalyze}
+                disabled={uploading || !imagePath || analyzing}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground animate-glow disabled:opacity-50"
+                size="lg"
+              >
+                {uploading ? 'Uploading...' : analyzing ? 'Analyzing...' : 'Analyze This Product'}
+              </Button>
             </div>
-            
-            <Button 
-              onClick={handleAnalyze}
-              disabled={uploading || !imagePath || analyzing}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground animate-glow disabled:opacity-50"
-              size="lg"
-            >
-              {uploading ? 'Uploading...' : analyzing ? 'Analyzing...' : 'Analyze This Product'}
-            </Button>
-          </div>
-        ) : (
-          <div className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 glass rounded-full flex items-center justify-center">
-              <Upload className="w-8 h-8 text-primary" />
+          ) : (
+            <div className="text-center space-y-4">
+              <div className="mx-auto w-16 h-16 glass rounded-full flex items-center justify-center">
+                <Upload className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold">
+                  {isDragActive ? 'Drop your product image here!' : 'Drag & drop your product image'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  PNG, JPG, WEBP up to 10MB
+                  {!user && <span className="block text-primary">Sign in required for upload</span>}
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="glass border-primary/30 hover:border-primary"
+                disabled={!user}
+              >
+                <Image className="w-4 h-4 mr-2" />
+                Choose File
+              </Button>
             </div>
-            <div>
-              <p className="text-lg font-semibold">
-                {isDragActive ? 'Drop your product image here!' : 'Drag & drop your product image'}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                PNG, JPG, WEBP up to 10MB
-                {!user && <span className="block text-primary">Sign in required for upload</span>}
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              className="glass border-primary/30 hover:border-primary"
-              disabled={!user}
-            >
-              <Image className="w-4 h-4 mr-2" />
-              Choose File
-            </Button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {fileRejections.length > 0 && (
         <div className="mt-4 p-3 glass-card rounded-xl border border-destructive/30">

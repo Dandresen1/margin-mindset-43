@@ -253,6 +253,8 @@ serve(async (req) => {
         status: 'completed',
         input: analysisInput,
         output: computedResults,
+        source_url: body.source_url,
+        data_source: body.data_source || (body.image_path ? 'image' : 'manual'),
         started_at: new Date().toISOString(),
         finished_at: new Date().toISOString()
       })

@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { UploadZone } from './UploadZone';
+import { URLInput } from './URLInput';
 import { Header } from './Header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Calculator, TrendingUp, DollarSign } from 'lucide-react';
 
 export const HeroSection = () => {
-  const [url, setUrl] = useState('');
-
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 pt-20 pb-10">
       <Header />
@@ -37,7 +35,7 @@ export const HeroSection = () => {
             <span className="text-primary animate-glow">Reality Checker</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Upload any product. See if you'll <span className="text-primary font-semibold">actually make money</span> or just burn cash.
+            Upload any product or paste a URL. See if you'll <span className="text-primary font-semibold">actually make money</span> or just burn cash.
           </p>
         </div>
 
@@ -46,26 +44,21 @@ export const HeroSection = () => {
           <UploadZone />
         </div>
 
-        {/* Alternative URL input */}
-        <div className="animate-slide-up" style={{ animationDelay: '0.6s' }}>
-          <div className="glass-card rounded-2xl p-6 max-w-md mx-auto">
-            <p className="text-sm text-muted-foreground mb-3">Or paste a product URL</p>
-            <div className="flex gap-3">
-              <Input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://aliexpress.com/item/..."
-                className="glass border-primary/20 focus:border-primary"
-              />
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground animate-glow">
-                Analyze
-              </Button>
-            </div>
+        {/* URL input alternative */}
+        <div className="animate-slide-up max-w-md mx-auto" style={{ animationDelay: '0.6s' }}>
+          <div className="text-center mb-4">
+            <span className="text-sm text-muted-foreground bg-background px-3 relative">
+              or
+            </span>
           </div>
+          <URLInput />
         </div>
 
-        {/* CTA button */}
+        {/* CTA button - Free analyses */}
         <div className="animate-slide-up" style={{ animationDelay: '0.9s' }}>
+          <p className="text-sm text-muted-foreground mb-3">
+            Start analyzing products for free
+          </p>
           <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 animate-glow">
             Try 3 Free Analyses
           </Button>
