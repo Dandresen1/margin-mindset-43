@@ -10,6 +10,7 @@ import Analysis from "./pages/Analysis";
 import AnalyzeURL from "./pages/AnalyzeURL";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import GuestAnalysis from "./pages/GuestAnalysis";
 
 const queryClient = new QueryClient();
 
