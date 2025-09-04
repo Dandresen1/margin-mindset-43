@@ -64,6 +64,27 @@ export const PLATFORM_FEE_STRUCTURES: Record<string, PlatformFees> = {
     payment_processing: 2.9,
     closing_fee: 0.30,
   },
+  aliexpress: {
+    referral_fee: 5.0, // Approximate based on category
+    payment_processing: 3.0,
+    closing_fee: 0.00,
+  },
+  alibaba: {
+    referral_fee: 0.0, // B2B platform, no selling fees
+    payment_processing: 3.0,
+    closing_fee: 0.00,
+  },
+  walmart: {
+    referral_fee: 15.0, // Similar to Amazon
+    fulfillment_fee: 3.00,
+    payment_processing: 2.9,
+    closing_fee: 0.30,
+  },
+  generic: {
+    referral_fee: 12.0, // Average across platforms
+    payment_processing: 2.9,
+    closing_fee: 0.30,
+  },
   ebay: {
     referral_fee: 12.9, // Average final value fee
     payment_processing: 2.9,

@@ -18,7 +18,7 @@ interface PrefilledData {
   product_name?: string;
   price?: string;
   cogs?: string;
-  platform?: 'amazon' | 'tiktok' | 'shopify' | 'etsy';
+  platform?: 'amazon' | 'tiktok' | 'shopify' | 'etsy' | 'aliexpress' | 'alibaba' | 'walmart' | 'generic';
   weight_oz?: string | number;
   conversion_rate?: string | number;
   cpc?: string | number;
@@ -44,7 +44,7 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
     product_name: prefilledData?.product_name || '',
     price: (prefilledData?.price ? String(prefilledData.price) : '') || '',
     cogs: (prefilledData?.cogs ? String(prefilledData.cogs) : '') || '',
-    platform: prefilledData?.platform || 'amazon' as 'amazon' | 'tiktok' | 'shopify' | 'etsy',
+    platform: prefilledData?.platform || 'amazon' as 'amazon' | 'tiktok' | 'shopify' | 'etsy' | 'aliexpress' | 'alibaba' | 'walmart' | 'generic',
     weight_oz: (prefilledData?.weight_oz ? String(prefilledData.weight_oz) : '') || '',
     conversion_rate: (prefilledData?.conversion_rate ? String(prefilledData.conversion_rate) : '') || '2',
     cpc: (prefilledData?.cpc ? String(prefilledData.cpc) : '') || '1.50'
@@ -230,6 +230,10 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                   <SelectItem value="tiktok">TikTok Shop (8% fees)</SelectItem>
                   <SelectItem value="etsy">Etsy (6.5% fees)</SelectItem>
                   <SelectItem value="shopify">Shopify (0% fees)</SelectItem>
+                  <SelectItem value="aliexpress">AliExpress (5% fees)</SelectItem>
+                  <SelectItem value="alibaba">Alibaba (0% fees)</SelectItem>
+                  <SelectItem value="walmart">Walmart (15% fees)</SelectItem>
+                  <SelectItem value="generic">Other Platform (12% fees)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -380,6 +384,10 @@ export const UploadZone = ({ prefilledData, mode = 'default' }: UploadZoneProps)
                       <SelectItem value="tiktok">TikTok Shop (8% fees)</SelectItem>
                       <SelectItem value="etsy">Etsy (6.5% fees)</SelectItem>
                       <SelectItem value="shopify">Shopify (0% fees)</SelectItem>
+                      <SelectItem value="aliexpress">AliExpress (5% fees)</SelectItem>
+                      <SelectItem value="alibaba">Alibaba (0% fees)</SelectItem>
+                      <SelectItem value="walmart">Walmart (15% fees)</SelectItem>
+                      <SelectItem value="generic">Other Platform (12% fees)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
