@@ -1,12 +1,18 @@
-export type Provider =
-  | 'amazon'
-  | 'etsy'
-  | 'aliexpress'
-  | 'alibaba'
-  | 'walmart'
-  | 'shopify'
-  | 'tiktok'
-  | 'generic';
+export const SUPPORTED_PROVIDERS = [
+  'amazon',
+  'etsy',
+  'aliexpress',
+  'alibaba',
+  'walmart',
+  'shopify',
+  'generic',
+] as const;
+
+export type Provider = (typeof SUPPORTED_PROVIDERS)[number];
+
+export function isSupported(provider: Provider): boolean {
+  return SUPPORTED_PROVIDERS.includes(provider);
+}
 
 export interface DetectResult {
   provider: Provider;
@@ -83,7 +89,6 @@ export function detectProvider(raw: string): DetectResult {
   else if (domain === 'alibaba.com') provider = 'alibaba';
   else if (domain === 'walmart.com') provider = 'walmart';
   else if (hostname.endsWith('.myshopify.com')) provider = 'shopify';
-  else if (/tiktok/.test(domain)) provider = 'tiktok';
 
   const patterns = PATTERNS[provider] || [];
   let id: string | null = null;
