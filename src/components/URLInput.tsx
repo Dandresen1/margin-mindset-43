@@ -3,13 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Link, AlertCircle } from 'lucide-react';
-import { URLAnalyzer } from '@/utils/urlAnalyzer';
+import { detectProvider, type DetectResult } from '@/lib/urlAnalyzer';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export const URLInput = () => {
   const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [helper, setHelper] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const navigate = useNavigate();
 
@@ -22,17 +23,17 @@ export const URLInput = () => {
     setAnalyzing(true);
     setError(null);
 
-    // Validate URL
-    const analysis = URLAnalyzer.analyzeURL(url.trim());
-    
-    if (!analysis.isValid) {
-      setError(analysis.error || 'Invalid URL');
+    let info: DetectResult;
+    try {
+      info = detectProvider(url.trim());
+    } catch {
+      setError('Invalid URL');
       setAnalyzing(false);
       return;
     }
 
-    // Navigate to URL analysis page
-    navigate(`/analyze-url?url=${encodeURIComponent(url.trim())}`);
+    const idParam = info.id ? `&id=${info.id}` : '';
+    navigate(`/analyze-url?url=${encodeURIComponent(info.canonicalUrl)}&provider=${info.provider}${idParam}`);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -51,18 +52,36 @@ export const URLInput = () => {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            Paste a product URL from Amazon, TikTok Shop, Etsy, or Shopify to get started
+            Paste a product URL from Amazon, Etsy, AliExpress, Alibaba, Walmart, Shopify, or any site to get started
           </p>
 
           <div className="space-y-3">
             <Input
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setUrl(val);
+                try {
+                  const r = detectProvider(val);
+                  if (r.provider === 'generic') {
+                    setHelper('We\u2019ll try to extract details from this site. You may need to provide cost/price manually.');
+                  } else {
+                    setHelper(`Detected ${r.provider}${r.id ? ` (ID ${r.id})` : ''}. We\u2019ll auto-extract details.`);
+                  }
+                  setError(null);
+                } catch {
+                  setHelper(null);
+                }
+              }}
               onKeyPress={handleKeyPress}
               placeholder="https://amazon.com/dp/B08N5WRWNW"
               className="w-full"
             />
-            
+
+            {helper && !error && (
+              <p className="text-xs text-muted-foreground">{helper}</p>
+            )}
+
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -83,9 +102,12 @@ export const URLInput = () => {
             <p className="mb-1">Supported platforms:</p>
             <div className="flex flex-wrap gap-2">
               <span className="px-2 py-1 bg-muted/20 rounded">Amazon</span>
-              <span className="px-2 py-1 bg-muted/20 rounded">TikTok Shop</span>
               <span className="px-2 py-1 bg-muted/20 rounded">Etsy</span>
+              <span className="px-2 py-1 bg-muted/20 rounded">AliExpress</span>
+              <span className="px-2 py-1 bg-muted/20 rounded">Alibaba</span>
+              <span className="px-2 py-1 bg-muted/20 rounded">Walmart</span>
               <span className="px-2 py-1 bg-muted/20 rounded">Shopify</span>
+              <span className="px-2 py-1 bg-muted/20 rounded">Others</span>
             </div>
           </div>
         </div>
