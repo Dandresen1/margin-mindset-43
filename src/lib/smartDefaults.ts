@@ -165,6 +165,10 @@ export function generatePricingStrategies(
     };
   };
 
+  const conservativeMetrics = calculateMetrics(Math.max(p75, cogs * 2.5), 3.2);
+  const marketMetrics = calculateMetrics(Math.max(p50, cogs * 2), 2.1);
+  const aggressiveMetrics = calculateMetrics(Math.max(p25, cogs * 1.5), 1.6);
+
   return [
     {
       name: 'Conservative' as const,
@@ -173,8 +177,13 @@ export function generatePricingStrategies(
       riskLevel: 'Low' as const,
       description: 'Premium positioning with healthy margins and lower competition risk',
       monthlyVolume: 'Lower volume (50-150 units), focus on profitability',
-      ...calculateMetrics(Math.max(p75, cogs * 2.5), 3.2),
-      get estimatedMargin() { return this.margin; }
+      estimatedMargin: conservativeMetrics.margin,
+      metrics: {
+        breakEven: conservativeMetrics.breakEven,
+        targetCPC: conservativeMetrics.targetCPC,
+        profitPerUnit: conservativeMetrics.profitPerUnit,
+        requiredConversion: conservativeMetrics.requiredConversion
+      }
     },
     {
       name: 'Market' as const,
@@ -183,8 +192,13 @@ export function generatePricingStrategies(
       riskLevel: 'Medium' as const,
       description: 'Competitive pricing aligned with market standards',
       monthlyVolume: 'Balanced volume (150-400 units), sustainable growth',
-      ...calculateMetrics(Math.max(p50, cogs * 2), 2.1),
-      get estimatedMargin() { return this.margin; }
+      estimatedMargin: marketMetrics.margin,
+      metrics: {
+        breakEven: marketMetrics.breakEven,
+        targetCPC: marketMetrics.targetCPC,
+        profitPerUnit: marketMetrics.profitPerUnit,
+        requiredConversion: marketMetrics.requiredConversion
+      }
     },
     {
       name: 'Aggressive' as const,
@@ -193,8 +207,13 @@ export function generatePricingStrategies(
       riskLevel: 'High' as const,
       description: 'Volume-focused strategy requiring excellent execution',
       monthlyVolume: 'High volume (400+ units), requires scale efficiency',
-      ...calculateMetrics(Math.max(p25, cogs * 1.5), 1.6),
-      get estimatedMargin() { return this.margin; }
+      estimatedMargin: aggressiveMetrics.margin,
+      metrics: {
+        breakEven: aggressiveMetrics.breakEven,
+        targetCPC: aggressiveMetrics.targetCPC,
+        profitPerUnit: aggressiveMetrics.profitPerUnit,
+        requiredConversion: aggressiveMetrics.requiredConversion
+      }
     }
   ];
 }
